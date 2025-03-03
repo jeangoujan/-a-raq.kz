@@ -2,7 +2,7 @@ from pydantic import BaseModel, field_validator, EmailStr
 import re
 from .database import Base
 from sqlalchemy import Column, Integer, String
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, relationship
 from typing import Optional
 
 class UserDB(Base):
@@ -13,6 +13,8 @@ class UserDB(Base):
     password = Column(String)
     name = Column(String)
     city = Column(String)
+
+    ads = relationship("AdsDB", back_populates="user", cascade="all, delete")
 
 
 class UserUpdate(BaseModel):
@@ -34,6 +36,7 @@ class UserUpdate(BaseModel):
 
 
 class UserResponse(BaseModel):
+    id: int
     username: EmailStr
     phone: str
     name: str

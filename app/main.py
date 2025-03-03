@@ -146,7 +146,6 @@ def delete_comment(shanyrak_id: int, comment_id: int, token: str = Depends(oauth
         raise HTTPException(status_code=404, detail="Comment not found")
     return Response("OK", status_code=200)
 
-# Получение объявления - количество комментариев
 
 
 

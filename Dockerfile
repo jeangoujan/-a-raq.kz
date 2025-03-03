@@ -1,8 +1,9 @@
 FROM python:3.12 AS requirements-stage
 WORKDIR /tmp
-RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir poetry
+RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir poetry poetry-core
 COPY ./pyproject.toml ./poetry.lock /tmp/
-RUN poetry export -f requirements.txt --output requirements.txt --without-hashes
+RUN poetry export --with dev -f requirements.txt --output requirements.txt --without-hashes
+
 
 
 FROM python:3.12

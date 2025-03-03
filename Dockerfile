@@ -1,9 +1,10 @@
 FROM python:3.12 AS requirements-stage
 WORKDIR /tmp
-RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir poetry poetry-core
+RUN curl -sSL https://install.python-poetry.org | python3 - --version 2.0.1
+RUN poetry self add poetry-plugin-export
 COPY ./pyproject.toml ./poetry.lock /tmp/
-RUN poetry export --with dev -f requirements.txt --output requirements.txt --without-hashes
-
+RUN ls -la /tmp
+RUN poetry export --without-hashes -f requirements.txt --output requirements.txt
 
 
 FROM python:3.12

@@ -6,6 +6,8 @@ from sqlalchemy import pool
 from alembic import context
 from app.database import Base
 from app.UserRepository import UserDB
+from app.ShanyraqRepository import AdsDB
+from app.CommentRepository import CommentDB
 
 
 # this is the Alembic Config object, which provides

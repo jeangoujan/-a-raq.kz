@@ -17,6 +17,7 @@ class AdsDB(Base):
 
     user_id = Column(Integer, ForeignKey("users.id"))
     user = relationship("UserDB", back_populates="ads")
+    comments = relationship("CommentDB", back_populates="shanyrak", cascade="all, delete")
 
 class AdRequest(BaseModel):
     type: str
@@ -25,6 +26,32 @@ class AdRequest(BaseModel):
     area: float
     rooms_count: int
     description: str
+
+    @field_validator("price", mode="before")
+    def price_validator(cls, value):
+        if value < 0:
+            raise ValueError("Price must be positive")
+        return value
+    
+    @field_validator("area", mode="before")
+    def area_validator(cls, value):
+        if value < 0:
+            raise ValueError("Area must be positive")
+        return value
+
+    @field_validator("rooms_count", mode="before")
+    def rooms_count_validator(cls, value):
+        if value < 0:
+            raise ValueError("Rooms count must be positive")
+        return value
+
+class AdUpdateRequest(BaseModel):
+    type: Optional[str] = None
+    price: Optional[int] = None
+    address: Optional[str] = None
+    area: Optional[float] = None
+    rooms_count: Optional[int] = None
+    description: Optional[str] = None
 
     @field_validator("price", mode="before")
     def price_validator(cls, value):
@@ -56,6 +83,8 @@ class GetAd(BaseModel):
     rooms_count: int
     description: str
     user_id: Optional[int] = None
+    total_comments: int
+
 
 class AdRepository():
     def __init__(self):
@@ -70,3 +99,24 @@ class AdRepository():
         db.commit()
         db.refresh(db_ad)
         return db_ad  
+    
+    def update_ad(self, db: Session, ad_id: int, **kwargs):
+        db_ad = db.query(AdsDB).filter(AdsDB.id == ad_id).first()
+        if not db_ad:
+            return None
+        for key, value in kwargs.items():
+            setattr(db_ad, key, value) 
+        db.commit()
+        db.refresh(db_ad)
+        return db_ad
+    
+    def delete_ad(self, db: Session, ad_id: int):
+        db_ad = db.query(AdsDB).filter(AdsDB.id == ad_id).first()
+        if db_ad is None:
+            return None
+        db.delete(db_ad)
+        db.commit()
+        return db_ad
+    
+
+    

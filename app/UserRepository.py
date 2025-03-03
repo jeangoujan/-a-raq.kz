@@ -15,6 +15,7 @@ class UserDB(Base):
     city = Column(String)
 
     ads = relationship("AdsDB", back_populates="user", cascade="all, delete")
+    comments = relationship("CommentDB", back_populates="author", cascade="all, delete")
 
 
 class UserUpdate(BaseModel):

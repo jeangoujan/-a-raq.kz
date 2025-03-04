@@ -94,7 +94,8 @@ def get_shanyrak(id: int, db: Session = Depends(get_db)):
 # Изменение объявления ----------------------
 @app.patch("/shanyraks/{id}", responses={404: {"description": "Ad not found"}},tags=["Ad"])
 def update_shanyrak(id: int, ad: AdUpdateRequest, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    updated_shanyrak = ads_repo.update_ad(db, id, **ad.model_dump(exclude_unset=True))
+    user_id = decode_jwt(token)
+    updated_shanyrak = ads_repo.update_ad(db, id, user_id, **ad.model_dump(exclude_unset=True))
     if not updated_shanyrak:
         raise HTTPException(status_code=404, detail="Ad not found")
     return Response("OK", status_code=200)
@@ -102,7 +103,8 @@ def update_shanyrak(id: int, ad: AdUpdateRequest, token: str = Depends(oauth2_sc
 # Удаление объявления -----------------------
 @app.delete("/shanyraks/{id}", responses={404: {"description": "Ad not found"}}, tags=["Ad"])
 def delete_shanyrak(id: int, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    deleted_shanyrak = ads_repo.delete_ad(db, id)
+    user_id = decode_jwt(token)
+    deleted_shanyrak = ads_repo.delete_ad(db, id, user_id)
     if not deleted_shanyrak:
         raise HTTPException(status_code=404, detail="Ad not found")
     return Response("OK", status_code=200)

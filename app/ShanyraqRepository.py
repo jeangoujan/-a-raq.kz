@@ -1,4 +1,5 @@
 from pydantic import BaseModel, field_validator, EmailStr
+from fastapi import HTTPException
 import re
 from .database import Base
 from sqlalchemy import Column, Integer, String, Float, ForeignKey
@@ -100,20 +101,24 @@ class AdRepository():
         db.refresh(db_ad)
         return db_ad  
     
-    def update_ad(self, db: Session, ad_id: int, **kwargs):
+    def update_ad(self, db: Session, ad_id: int, us_id: int, **kwargs):
         db_ad = db.query(AdsDB).filter(AdsDB.id == ad_id).first()
         if not db_ad:
             return None
+        if db_ad.user_id != us_id:
+            raise HTTPException(status_code=403, detail="Permission denied")
         for key, value in kwargs.items():
             setattr(db_ad, key, value) 
         db.commit()
         db.refresh(db_ad)
         return db_ad
     
-    def delete_ad(self, db: Session, ad_id: int):
+    def delete_ad(self, db: Session, ad_id: int, us_id: int):
         db_ad = db.query(AdsDB).filter(AdsDB.id == ad_id).first()
         if db_ad is None:
             return None
+        if db_ad.user_id != us_id:
+            raise HTTPException(status_code=403, detail="Permission denied")
         db.delete(db_ad)
         db.commit()
         return db_ad

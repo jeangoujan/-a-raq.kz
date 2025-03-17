@@ -6,7 +6,7 @@ from sqlalchemy.orm import relationship, Session
 from .database import Base
 from pydantic import BaseModel
 import pytz
-
+from .ShanyraqRepository import AdsDB
 
 local_timezone = pytz.timezone("Asia/Almaty")
 
@@ -64,7 +64,7 @@ class CommentRepository:
         if not db_comment:
             return None
         if db_comment.author_id != user_id:
-            raise HTTPException(status_code=403, detail="Permission denied")
+            raise HTTPException(status_code=403, detail="Forbidden")
         for key, value in kwargs.items():
             setattr(db_comment, key, value)
         db.commit()
@@ -73,10 +73,11 @@ class CommentRepository:
     
     def delete_comment(self, db: Session, comment_id: int, user_id: int):
         db_comment = db.query(CommentDB).filter(CommentDB.id == comment_id).first()
+        db_sanyraq = db.query(AdsDB).filter(AdsDB.id == db_comment.shanyrak_id).first()
         if db_comment is None:
             return None
-        if db_comment.author_id != user_id:
-            raise HTTPException(status_code=403, detail="Permission denied")
+        if db_comment.author_id != user_id and db_sanyraq.user_id != user_id:
+            raise HTTPException(status_code=403, detail="Forbidden")
         db.delete(db_comment)
         db.commit()
         return db_comment

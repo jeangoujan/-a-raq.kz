@@ -2,9 +2,9 @@ from pydantic import BaseModel, field_validator, EmailStr
 from fastapi import HTTPException
 import re
 from .database import Base
-from sqlalchemy import Column, Integer, String, Float, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, and_
 from sqlalchemy.orm import Session, relationship
-from typing import Optional
+from typing import Optional, Dict
 
 class AdsDB(Base):
     __tablename__ = "ads"
@@ -19,6 +19,7 @@ class AdsDB(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     user = relationship("UserDB", back_populates="ads")
     comments = relationship("CommentDB", back_populates="shanyrak", cascade="all, delete")
+    favorited_by = relationship("FavoriteDB", back_populates="ad", cascade="all, delete")
 
 class AdRequest(BaseModel):
     type: str
@@ -106,7 +107,7 @@ class AdRepository():
         if not db_ad:
             return None
         if db_ad.user_id != us_id:
-            raise HTTPException(status_code=403, detail="Permission denied")
+            raise HTTPException(status_code=403, detail="Forbidden")
         for key, value in kwargs.items():
             setattr(db_ad, key, value) 
         db.commit()
@@ -118,10 +119,48 @@ class AdRepository():
         if db_ad is None:
             return None
         if db_ad.user_id != us_id:
-            raise HTTPException(status_code=403, detail="Permission denied")
+            raise HTTPException(status_code=403, detail="Forbidden")
         db.delete(db_ad)
         db.commit()
         return db_ad
     
+    def search_shanyrak(
+        self,
+        db: Session,
+        limit: int,
+        offset: int,
+        ad_type: Optional[str] = None,
+        rooms_count: Optional[int] = None,
+        price_from: Optional[int] = None,
+        price_until: Optional[int] = None
+    ):
+        filters = []
+        if ad_type:
+            filters.append(AdsDB.type == ad_type)
+        if rooms_count:
+            filters.append(AdsDB.rooms_count == rooms_count)
+        if price_from:
+            filters.append(AdsDB.price >= price_from)
+        if price_until:
+            filters.append(AdsDB.price <= price_until)
 
-    
+        query = db.query(AdsDB).filter(and_(*filters))
+
+        total = query.count()
+
+        ads = query.order_by(AdsDB.id.desc()).offset(offset).limit(limit).all()
+
+        return {
+            "total": total,
+            "objects": [
+                {
+                    "_id": ad.id,
+                    "type": ad.type,
+                    "price": ad.price,
+                    "address": ad.address,
+                    "area": ad.area,
+                    "rooms_count": ad.rooms_count
+                }
+                for ad in ads
+            ]
+        }

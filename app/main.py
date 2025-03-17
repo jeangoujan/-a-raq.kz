@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Form, Request, HTTPException, Response, Depends
+from fastapi import FastAPI, Form, Request, HTTPException, Response, Depends, Query
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordBearer
 from .database import Base, engine, SessionLocal
@@ -7,6 +7,7 @@ from .UserRepository import UserDB, UserRequest, UserResponse, UsersRepository, 
 from .ShanyraqRepository import AdsDB, AdRequest, AdResponse, AdRepository, GetAd, AdUpdateRequest
 from .CommentRepository import CommentRepository, CommentRequest
 from .tools import create_jwt, decode_jwt
+from typing import Optional
 
 app = FastAPI()
 user_repo = UsersRepository()
@@ -147,6 +148,51 @@ def delete_comment(shanyrak_id: int, comment_id: int, token: str = Depends(oauth
     if not deleted_comment:
         raise HTTPException(status_code=404, detail="Comment not found")
     return Response("OK", status_code=200)
+
+# Добавление объявления в избранное ---------
+@app.post("/auth/users/favorites/{shanyrak_id}", responses={404: {"description": "Ad not found"}}, tags=["Favorites"])
+def add_favorite(shanyrak_id: int, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    user_id = decode_jwt(token)
+    if not ads_repo.get_ad_by_id(db, shanyrak_id):
+        raise HTTPException(status_code=404, detail="Ad not found")
+    user_repo.add_favorite(db, user_id, shanyrak_id)
+    return Response("OK", status_code=200)
+
+# Получение списка избранных ----------------
+@app.get("/auth/users/favorites", tags=["Favorites"])
+def get_favorites(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    user_id = decode_jwt(token)
+    return user_repo.get_favorites(db, user_id)
+
+# Удаление из избранного --------------------
+@app.delete("/auth/users/favorites/{shanyrak_id}", responses={404: {"description": "Ad not found"}}, tags=["Favorites"])
+def delete_favorites(shanyrak_id: int, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    user_id = decode_jwt(token)
+    if not ads_repo.get_ad_by_id(db, shanyrak_id):
+        raise HTTPException(status_code=404, detail="Ad not found")
+    user_repo.delete_favorite(db, user_id, shanyrak_id)
+    return Response("OK", status_code=200)
+
+# Получение объявлений с поиском и пагинацией - 
+@app.get("/shanyraks/", tags=["Ad"])
+def search_shanyraks(
+    db: Session = Depends(get_db),
+    limit: int = Query(10, ge=1),
+    offset: int = Query(0, ge=0),
+    ad_type: Optional[str] = None,
+    rooms_count: Optional[int] = None,
+    price_from: Optional[int] = None,
+    price_until: Optional[int] = None
+):
+    print("DEBUG:", db, limit, offset, ad_type, rooms_count, price_from, price_until)
+    return ads_repo.search_shanyrak(
+        db,
+        limit,
+        offset,
+        ad_type,
+        rooms_count,
+        price_from,
+        price_until)
 
 
 

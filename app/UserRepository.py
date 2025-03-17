@@ -1,7 +1,7 @@
 from pydantic import BaseModel, field_validator, EmailStr
 import re
 from .database import Base
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import Session, relationship
 from typing import Optional
 
@@ -16,6 +16,16 @@ class UserDB(Base):
 
     ads = relationship("AdsDB", back_populates="user", cascade="all, delete")
     comments = relationship("CommentDB", back_populates="author", cascade="all, delete")
+    favorites = relationship("FavoriteDB", back_populates="user", cascade="all, delete")
+
+class FavoriteDB(Base):
+    __tablename__ = "favorites"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
+    shanyrak_id = Column(Integer, ForeignKey("ads.id", ondelete="CASCADE"))
+
+    user = relationship("UserDB", back_populates="favorites")
+    ad = relationship("AdsDB", back_populates="favorited_by")
 
 
 class UserUpdate(BaseModel):
@@ -109,6 +119,31 @@ class UsersRepository:
         db.commit()
         db.refresh(db_user)
         return db_user
+    
+    def add_favorite(self, db: Session, user_id: int, ad_id: int):
+        favorite = db.query(FavoriteDB).filter(FavoriteDB.user_id == user_id, FavoriteDB.shanyrak_id == ad_id).first()
+        if favorite:
+            return
+        new_favorite = FavoriteDB(user_id=user_id, shanyrak_id=ad_id)
+        db.add(new_favorite)
+        db.commit()
+
+    def get_favorites(self, db: Session, user_id: int):
+        favorites = db.query(FavoriteDB).filter(FavoriteDB.user_id == user_id).all()
+        return {
+            "shanyraks": [
+                {"_id": fav.shanyrak_id, "address": fav.ad.address}
+                for fav in favorites if fav.ad
+            ]
+        }
+    
+    def delete_favorite(self, db: Session, user_id: int, ad_id: int):
+        favorite = db.query(FavoriteDB).filter(FavoriteDB.user_id == user_id, FavoriteDB.shanyrak_id == ad_id).first()
+        if favorite:
+            db.delete(favorite)
+            db.commit()
+            return True
+        return False
 
 
         
